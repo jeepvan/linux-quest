@@ -526,63 +526,56 @@ if [ -n "\$GUM" ] && [ -t 0 ]; then
 fi
 clear
 
-# ---- banner ----
-show_banner() {
-    if command -v figlet >/dev/null 2>&1; then
-        if command -v lolcat >/dev/null 2>&1; then
-            figlet "QUEST" "COMPLETE" | lolcat \$1
-        else
-            figlet "QUEST" "COMPLETE"
-        fi
+# ---- pieces ----
+TUX_RAW="\$(cat "\$QDIR/.tux" 2>/dev/null)"
+tux_block() {
+    if command -v lolcat >/dev/null 2>&1; then
+        printf '%s\n' "\$TUX_RAW" | lolcat -f
     else
-        echo "===== QUEST COMPLETE ====="
+        printf '%s%s%s\n' "\$WHT" "\$TUX_RAW" "\$RST"
     fi
 }
-show_banner
+head_block() {
+    if command -v figlet >/dev/null 2>&1; then
+        H="\$(figlet -f small "QUEST COMPLETED" 2>/dev/null || figlet "QUEST")"
+    else
+        H="   Q U E S T   C O M P L E T E D"
+    fi
+    if command -v lolcat >/dev/null 2>&1; then
+        printf '%s\n' "\$H" | lolcat -f
+    else
+        printf '%s%s%s\n' "\$GRN" "\$H" "\$RST"
+    fi
+}
 
-# ---- certificate box ----
+LEFT_TXT="\${GRN}CERTIFIED SYSTEM EXPLORER\${RST}
+
+\${BLU}    \$name\${RST}
+
+\${WHT}found your place - uncovered the hidden
+built, rescued, and searched
+unlocked the sealed - read the machine's heart
+joined tools into pipelines\${RST}
+
+\${BLU}'It was waiting for you, \$name.
+ It is called Linux.
+ And now it is yours.'\${RST}"
+
+# ---- one certificate, everything inside the border ----
 if [ -n "\$GUM" ]; then
-    CERT=\$("\$GUM" style --border double --padding "1 4" --margin "1 2" --align center \\
-        --border-foreground "40" --foreground "255" --bold \\
-        "CERTIFIED SYSTEM EXPLORER" "" "\$name" "" \\
-        "found your place - uncovered the hidden" \\
-        "built, rescued, and searched" \\
-        "unlocked the sealed - read the machine's heart" \\
-        "joined tools into pipelines")
-    QUOTE=\$("\$GUM" style --padding "0 2" --italic --foreground "44" \\
-        "'It was waiting for you, \$name." \\
-        " It is called Linux. And now it is yours.'")
+    LEFT=\$("\$GUM" style --padding "1 3" "\$LEFT_TXT")
+    RIGHT=\$(tux_block)
+    BODY=\$("\$GUM" join --horizontal --align top "\$LEFT" "\$RIGHT")
+    CERT=\$("\$GUM" style --border double --padding "1 2" --border-foreground "40" \\
+           "\$(printf '%s\n\n%s' "\$(head_block)" "\$BODY")")
 else
-    CERT="  CERTIFIED SYSTEM EXPLORER:  \$name
-  found your place - uncovered the hidden
-  built, rescued, and searched
-  unlocked the sealed - read the machine's heart
-  joined tools into pipelines"
-    QUOTE="  'It was waiting for you, \$name.
-   It is called Linux. And now it is yours.'"
+    CERT=\$(head_block; echo ""; printf '%s\n' "\$LEFT_TXT"; echo ""; tux_block)
 fi
 printf '%s\n' "\$CERT"
-printf '%s\n' "\$QUOTE"
-
-# ---- the big tux ----
-show_tux() {
-    if command -v lolcat >/dev/null 2>&1; then
-        cat "\$QDIR/.tux" 2>/dev/null | lolcat \$1
-    else
-        printf '%s' "\$WHT"; cat "\$QDIR/.tux" 2>/dev/null; printf '%s' "\$RST"
-    fi
-}
-show_tux
-echo ""
 
 # ---- save the certificate as a file they keep ----
 CERTFILE="\$QDIR/certificate.txt"
-{
-    show_banner -f
-    printf '%s\n' "\$CERT"
-    printf '%s\n' "\$QUOTE"
-    show_tux -f
-} > "\$CERTFILE" 2>/dev/null
+printf '%s\n' "\$CERT" > "\$CERTFILE" 2>/dev/null
 
 qbox 31 \\
     "\${WHT}Your certificate is saved as a file:\${RST}" \\
@@ -604,53 +597,34 @@ AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA[[/X]]
 (the admin is proud of you, secretly)
 EOF
 
-# ---- the big tux (shown at the ceremony) ----
+# ---- the small tux (shown at the ceremony) ----
 cat > "$Q/.tux" << 'TUXEOF'
-                                .:xxxxxxxx:.
-                             .xxxxxxxxxxxxxxxx.
-                            :xxxxxxxxxxxxxxxxxxx:.
-                           .xxxxxxxxxxxxxxxxxxxxxxx:
-                          :xxxxxxxxxxxxxxxxxxxxxxxxx:
-                          xxxxxxxxxxxxxxxxxxxxxxxxxxX:
-                          xxx:::xxxxxxxx::::xxxxxxxxx:
-                         .xx:   ::xxxxx:     :xxxxxxxx
-                         :xx  x.  xxxx:  xx.  xxxxxxxx
-                         :xx xxx  xxxx: xxxx  :xxxxxxx
-                         'xx 'xx  xxxx:. xx'  xxxxxxxx
-                          xx ::::::xx:::::.   xxxxxxxx
-                          xx:::::.::::.:::::::xxxxxxxx
-                          :x'::::'::::':::::':xxxxxxxxx.
-                          :xx.::::::::::::'   xxxxxxxxxx
-                          :xx: '::::::::'     :xxxxxxxxxx.
-                         .xx     '::::'        'xxxxxxxxxx.
-                       .xxxx                     'xxxxxxxxx.
-                     .xxxx                         'xxxxxxxxx.
-                   .xxxxx:                          xxxxxxxxxx.
-                  .xxxxx:'                          xxxxxxxxxxx.
-                 .xxxxxx:::.           .       ..:::_xxxxxxxxxxx:.
-                .xxxxxxx''      ':::''            ''::xxxxxxxxxxxx.
-                xxxxxx            :                  '::xxxxxxxxxxxx
-               :xxxx:'            :                    'xxxxxxxxxxxx:
-              .xxxxx              :                     ::xxxxxxxxxxxx
-              xxxx:'                                    ::xxxxxxxxxxxx
-              xxxx               .                      ::xxxxxxxxxxxx.
-          .:xxxxxx               :                      ::xxxxxxxxxxxx::
-          xxxxxxxx               :                      ::xxxxxxxxxxxxx:
-          xxxxxxxx               :                      ::xxxxxxxxxxxxx:
-          ':xxxxxx               '                      ::xxxxxxxxxxxx:'
-            .:. xx:.                                   .:xxxxxxxxxxxxx'
-          ::::::.'xx:.            :                  .:: xxxxxxxxxxx':
-  .:::::::::::::::.'xxxx.                            ::::'xxxxxxxx':::.
-  ::::::::::::::::::.'xxxxx                          :::::.'.xx.'::::::.
-  ::::::::::::::::::::.'xxxx:.                       :::::::.'':::::::::
-  ':::::::::::::::::::::.'xx:'                     .'::::::::::::::::::::..
-    :::::::::::::::::::::.'xx                    .:: :::::::::::::::::::::::
-  .:::::::::::::::::::::::. xx               .::xxxx :::::::::::::::::::::::
-  :::::::::::::::::::::::::.'xxx..        .::xxxxxxx ::::::::::::::::::::'
-  '::::::::::::::::::::::::: xxxxxxxxxxxxxxxxxxxxxxx :::::::::::::::::'
-    '::::::::::::::::::::::: xxxxxxxxxxxxxxxxxxxxxxx :::::::::::::::'
-        ':::::::::::::::::::_xxxxxx::'''::xxxxxxxxxx '::::::::::::'
-             '':.::::::::::'                        `._'::::::''
+                .88888888:.
+               88888888.88888.
+             .8888888888888888.
+             888888888888888888
+             88' _`88'_  `88888
+             88 88 88 88  88888
+             88_88_::_88_:88888
+             88:::,::,:::::8888
+             88`:::::::::'`8888
+            .88  `::::'    8:88.
+           8888            `8:888.
+         .8888'             `888888.
+        .8888:..  .::.  ...:'8888888:.
+       .8888.'     :'     `'::`88:88888
+      .8888        '         `.888:8888.
+     888:8         .           888:88888
+   .888:88        .:           888:88888:
+   8888888.       ::           88:888888
+   `.::.888.      ::          .88888888
+  .::::::.888.    ::         :::`8888'.:.
+ ::::::::::.888   '         .::::::::::::
+ ::::::::::::.8    '      .:8::::::::::::.
+.::::::::::::::.        .:888:::::::::::::
+:::::::::::::::88:.__..:88888:::::::::::'
+ `'.:::::::::::88888888888.88:::::::::'
+       `':::_:' -- '' -'-' `':_::::'`
 TUXEOF
 
 # ============================================================
