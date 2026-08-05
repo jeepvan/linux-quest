@@ -16,6 +16,9 @@ BIN="$HOME/.local/bin"
 LIB="$HOME/.quest_lib.sh"
 GUM_VER="0.14.5"
 
+# always run from a stable directory (setup may delete the CWD)
+cd "$HOME" || exit 1
+
 # ---------- reset ----------
 if [ -d "$Q" ]; then
     chmod -R 700 "$Q" 2>/dev/null
@@ -381,7 +384,6 @@ But you just proved something important:
 
 Prove you read me:  ./claim.sh
 EOF
-chmod 000 "$A3/mission1_sealed/sealed_letter.txt"
 
 cat > "$A3/mission1_sealed/note.txt" << 'EOF'
 A letter lies here, [[X]]SEALED[[/X]]. Try to read it. [[X]]Denied?[[/X]]
@@ -636,7 +638,8 @@ else
     } > "$Q/START_HERE.tmp" && mv "$Q/START_HERE.tmp" "$Q/START_HERE.txt"
 fi
 
-# lock the future acts (AFTER styling)
+# lock the sealed letter and future acts (AFTER styling, so sed could reach them)
+chmod 000 "$Q/act3_locked/mission1_sealed/sealed_letter.txt"
 chmod 000 "$Q/act2_locked" "$Q/act3_locked"
 
 # ============================================================
