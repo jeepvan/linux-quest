@@ -1,16 +1,19 @@
 #!/bin/bash
 # ============================================================
-#  LINUX QUEST v2 - world builder
+#  LINUX QUEST v3 - world builder (gum edition)
 #  Runs on: Google Cloud Shell, WSL Ubuntu, Docker, any Linux
 #  Usage:   bash <(curl -sL YOURLINK/setup.sh)
 #  Reset:   re-run the same command (name + keys survive)
 #  Fresh:   bash setup.sh --fresh   (wipes name + keys too)
+#  gum is optional polish: if it can't download, everything
+#  still works with plain prompts.
 # ============================================================
 
 Q="$HOME/linux-quest"
 KEYS="$HOME/.quest_keys"
 NAMEF="$HOME/.quest_name"
 BIN="$HOME/.local/bin"
+GUM_VER="0.14.5"
 
 # ---------- reset ----------
 if [ -d "$Q" ]; then
@@ -21,13 +24,29 @@ if [ "$1" = "--fresh" ]; then rm -f "$KEYS" "$NAMEF"; fi
 touch "$KEYS"
 mkdir -p "$Q" "$BIN"
 
+# ---------- get gum (best effort, never blocks) ----------
+if [ ! -x "$BIN/gum" ] && ! command -v gum >/dev/null 2>&1; then
+    if [ "$(uname -m)" = "x86_64" ]; then
+        curl -sL "https://github.com/charmbracelet/gum/releases/download/v${GUM_VER}/gum_${GUM_VER}_Linux_x86_64.tar.gz" \
+            | tar xz -C /tmp 2>/dev/null \
+            && cp "/tmp/gum_${GUM_VER}_Linux_x86_64/gum" "$BIN/gum" 2>/dev/null \
+            && chmod +x "$BIN/gum"
+    fi
+fi
+GUM="$BIN/gum"
+[ -x "$GUM" ] || GUM="$(command -v gum 2>/dev/null)"
+
 # ---------- ask the explorer's name (once) ----------
 if [ ! -s "$NAMEF" ]; then
     QNAME=""
     if [ -t 0 ]; then
-        echo ""
-        echo "Before the system wakes... state your name, explorer:"
-        read -r QNAME
+        if [ -n "$GUM" ]; then
+            QNAME=$("$GUM" input --placeholder "state your name, explorer..." --prompt "🐧 > ")
+        else
+            echo ""
+            echo "Before the system wakes... state your name, explorer:"
+            read -r QNAME
+        fi
     fi
     [ -z "$QNAME" ] && QNAME="Explorer"
     echo "$QNAME" > "$NAMEF"
@@ -114,9 +133,10 @@ Go back to the quest folder. Find gate2.
 It will not open without proof you found me.
 EOF
 
-# easter egg
+# ---- easter egg #1 ----
 mkdir -p "$Q/act1/.graffiti"
 cat > "$Q/act1/.graffiti/wall.txt" << 'EOF'
+  🥚 EASTER EGG FOUND 🥚
   ACHIEVEMENT UNLOCKED: The Curious One
   (you checked a room nobody told you about)
 
@@ -138,9 +158,19 @@ cat > "$Q/gate2.sh" << 'EOF'
 #!/bin/bash
 Q="$HOME/linux-quest"
 KEYS="$HOME/.quest_keys"
-echo "The gate hums: 'Speak the first key fragment.'"
-read -r answer
+GUM="$HOME/.local/bin/gum"; [ -x "$GUM" ] || GUM="$(command -v gum 2>/dev/null)"
+
+if [ -n "$GUM" ] && [ -t 0 ]; then
+    answer=$("$GUM" input --placeholder "speak the first key fragment..." --prompt "🔒 gate2 > ")
+else
+    echo "The gate hums: 'Speak the first key fragment.'"
+    read -r answer
+fi
+
 if [ "$answer" = "TUX-1" ]; then
+    if [ -n "$GUM" ] && [ -t 0 ]; then
+        "$GUM" spin --spinner dot --title "the gate verifies your fragment..." -- sleep 1.5
+    fi
     grep -q "TUX-1" "$KEYS" || echo "TUX-1" >> "$KEYS"
     chmod 755 "$Q/act2_locked" 2>/dev/null
     mv "$Q/act2_locked" "$Q/act2" 2>/dev/null
@@ -262,9 +292,19 @@ cat > "$Q/gate3.sh" << 'EOF'
 #!/bin/bash
 Q="$HOME/linux-quest"
 KEYS="$HOME/.quest_keys"
-echo "The last gate whispers: 'The access code. Now.'"
-read -r answer
+GUM="$HOME/.local/bin/gum"; [ -x "$GUM" ] || GUM="$(command -v gum 2>/dev/null)"
+
+if [ -n "$GUM" ] && [ -t 0 ]; then
+    answer=$("$GUM" input --placeholder "the access code from the logs..." --prompt "🔒 gate3 > ")
+else
+    echo "The last gate whispers: 'The access code. Now.'"
+    read -r answer
+fi
+
 if [ "$answer" = "TUX-4" ]; then
+    if [ -n "$GUM" ] && [ -t 0 ]; then
+        "$GUM" spin --spinner line --title "heavy machinery grinding..." -- sleep 1.5
+    fi
     grep -q "TUX-4" "$KEYS" || echo "TUX-4" >> "$KEYS"
     chmod 755 "$Q/act3_locked" 2>/dev/null
     mv "$Q/act3_locked" "$Q/act3" 2>/dev/null
@@ -315,8 +355,15 @@ EOF
 cat > "$A3/mission1_sealed/claim.sh" << 'EOF'
 #!/bin/bash
 KEYS="$HOME/.quest_keys"
-echo "The room asks: 'What fragment did the sealed letter reveal?'"
-read -r answer
+GUM="$HOME/.local/bin/gum"; [ -x "$GUM" ] || GUM="$(command -v gum 2>/dev/null)"
+
+if [ -n "$GUM" ] && [ -t 0 ]; then
+    answer=$("$GUM" input --placeholder "what fragment did the letter reveal?" --prompt "✉️  > ")
+else
+    echo "The room asks: 'What fragment did the sealed letter reveal?'"
+    read -r answer
+fi
+
 if [ "$answer" = "TUX-5" ]; then
     grep -q "TUX-5" "$KEYS" || echo "TUX-5" >> "$KEYS"
     echo ""
@@ -346,10 +393,16 @@ EOF
 cat > "$A3/mission2_heart/heart.sh" << 'EOF'
 #!/bin/bash
 KEYS="$HOME/.quest_keys"
+GUM="$HOME/.local/bin/gum"; [ -x "$GUM" ] || GUM="$(command -v gum 2>/dev/null)"
 real=$(nproc)
-echo "The machine asks: 'How many processors do I have?'"
-echo "(the heart-file knows... every processor is listed inside it)"
-read -r answer
+
+if [ -n "$GUM" ] && [ -t 0 ]; then
+    answer=$("$GUM" input --placeholder "how many processors do I have?" --prompt "💓 > ")
+else
+    echo "The machine asks: 'How many processors do I have?'"
+    read -r answer
+fi
+
 if [ "$answer" = "$real" ]; then
     grep -q "TUX-6" "$KEYS" || echo "TUX-6" >> "$KEYS"
     echo ""
@@ -393,6 +446,7 @@ cat > "$A3/mission3_final/final_door.sh" << 'EOF'
 #!/bin/bash
 KEYS="$HOME/.quest_keys"
 NAMEF="$HOME/.quest_name"
+GUM="$HOME/.local/bin/gum"; [ -x "$GUM" ] || GUM="$(command -v gum 2>/dev/null)"
 need="TUX-1 TUX-2 TUX-3 TUX-4 TUX-5 TUX-6"
 for k in $need; do
     if ! grep -q "$k" "$KEYS"; then
@@ -401,17 +455,28 @@ for k in $need; do
         exit 1
     fi
 done
-echo "The door: 'Six fragments. Impressive. The FINALWORD?'"
-read -r word
+
+if [ -n "$GUM" ] && [ -t 0 ]; then
+    word=$("$GUM" input --placeholder "six fragments... now, the FINALWORD" --prompt "🚪 > ")
+else
+    echo "The door: 'Six fragments. Impressive. The FINALWORD?'"
+    read -r word
+fi
+
 if [ "$word" != "freedom" ]; then
     echo "'Wrong. It hides in the transmission. Pipe your tools together.'"
     exit 1
 fi
+
 if [ -s "$NAMEF" ]; then
     name="$(cat "$NAMEF")"
 else
     echo "'...Correct. State your name for the record:'"
     read -r name
+fi
+
+if [ -n "$GUM" ] && [ -t 0 ]; then
+    "$GUM" spin --spinner pulse --title "the final door opens for $name..." -- sleep 2
 fi
 clear
 if command -v figlet >/dev/null 2>&1; then
@@ -420,34 +485,36 @@ if command -v figlet >/dev/null 2>&1; then
     else
         figlet "QUEST COMPLETE"
     fi
-else
-cat << 'ART'
-  ___  _   _ _____ ____ _____    ____ ___  __  __ ____  _     _____ _____ _____
- / _ \| | | | ____/ ___|_   _|  / ___/ _ \|  \/  |  _ \| |   | ____|_   _| ____|
-| | | | | | |  _| \___ \ | |   | |  | | | | |\/| | |_) | |   |  _|   | | |  _|
-| |_| | |_| | |___ ___) || |   | |__| |_| | |  | |  __/| |___| |___  | | | |___
- \__\_\\___/|_____|____/ |_|    \____\___/|_|  |_|_|   |_____|_____| |_| |_____|
-ART
 fi
-echo ""
-echo "  =============================================="
-echo "   CERTIFIED SYSTEM EXPLORER:  $name"
-echo ""
-echo "   You woke up unable to see your own location."
-echo "   You leave knowing how to:"
-echo "     - find your place, and look around"
-echo "     - uncover what others hide"
-echo "     - build, move, and rescue"
-echo "     - search 50 files in one breath"
-echo "     - unlock what was sealed"
-echo "     - read the machine's own heart"
-echo "     - join tools into pipelines"
-echo ""
-echo "   The admin's final message:"
-echo "     'This system was never abandoned."
-echo "      It was waiting for you, $name."
-echo "      It is called Linux. And now it is yours.'"
-echo "  =============================================="
+
+if [ -n "$GUM" ]; then
+    "$GUM" style --border double --padding "1 4" --margin "1 2" --align center \
+        --border-foreground 82 --bold \
+        "CERTIFIED SYSTEM EXPLORER" "" "$name" "" \
+        "found your place - uncovered the hidden" \
+        "built, rescued, and searched" \
+        "unlocked the sealed - read the machine's heart" \
+        "joined tools into pipelines"
+    "$GUM" style --padding "0 2" --italic --foreground 245 \
+        "'This system was never abandoned." \
+        " It was waiting for you, $name." \
+        " It is called Linux. And now it is yours.'"
+else
+    echo ""
+    echo "  =============================================="
+    echo "   CERTIFIED SYSTEM EXPLORER:  $name"
+    echo ""
+    echo "   found your place - uncovered the hidden"
+    echo "   built, rescued, and searched"
+    echo "   unlocked the sealed - read the machine's heart"
+    echo "   joined tools into pipelines"
+    echo ""
+    echo "   'This system was never abandoned."
+    echo "    It was waiting for you, $name."
+    echo "    It is called Linux. And now it is yours.'"
+    echo "  =============================================="
+fi
+
 if command -v cowsay >/dev/null 2>&1; then
     echo "welcome home, $name" | cowsay -f tux 2>/dev/null || echo "welcome home, $name" | cowsay
 fi
@@ -456,20 +523,20 @@ echo "  (screenshot this. you earned it.)"
 EOF
 chmod +x "$A3/mission3_final/final_door.sh"
 
-# easter egg in act3
+# ---- easter egg #2 ----
 cat > "$A3/.do_not_open.txt" << 'EOF'
 AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
         WHY WOULD YOU OPEN THIS
 IT LITERALLY SAYS DO NOT OPEN
 AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 
-...fine. ACHIEVEMENT UNLOCKED: Rule Breaker
+...fine. 🥚 EASTER EGG FOUND 🥚
+ACHIEVEMENT UNLOCKED: Rule Breaker
 (the admin is proud of you, secretly)
 EOF
 
 # ============================================================
-#  COLORIZE: turn [[C]]...[[E]] into highlighted blocks
-#            and [[U]]...[[E]] into underlined text
+#  COLORIZE + STYLE the notes
 # ============================================================
 CHL=$(printf '\033[48;5;236m\033[1;93m')   # dark block + bold yellow
 UND=$(printf '\033[4;96m')                 # underline + cyan
@@ -478,7 +545,16 @@ find "$Q" -name "*.txt" -type f | while read -r f; do
     sed -i "s/\[\[C\]\]/${CHL} /g; s/\[\[U\]\]/${UND}/g; s/\[\[\/U\]\]/${RST}/g; s/\[\[E\]\]/ ${RST}/g" "$f" 2>/dev/null
 done
 
-# lock the future acts (AFTER colorizing)
+# wrap act2/act3 mission notes in gum borders (act1 stays raw, as designed)
+if [ -n "$GUM" ]; then
+    for f in "$A2"/mission*/note.txt "$A3"/mission*/note.txt; do
+        [ -f "$f" ] || continue
+        styled=$("$GUM" style --border rounded --padding "1 2" --border-foreground 212 "$(cat "$f")" 2>/dev/null)
+        [ -n "$styled" ] && printf '%s\n' "$styled" > "$f"
+    done
+fi
+
+# lock the future acts (AFTER styling)
 chmod 000 "$Q/act2_locked" "$Q/act3_locked"
 
 # ============================================================
@@ -505,9 +581,17 @@ chmod +x "$BIN/hint"
 
 cat > "$BIN/quest-progress" << 'EOF'
 #!/bin/bash
-echo "Explorer: $(cat "$HOME/.quest_name" 2>/dev/null || echo unknown)"
-echo "Key fragments collected:"
-if [ -s "$HOME/.quest_keys" ]; then cat "$HOME/.quest_keys"; else echo "  (none yet)"; fi
+GUM="$HOME/.local/bin/gum"; [ -x "$GUM" ] || GUM="$(command -v gum 2>/dev/null)"
+NAME="$(cat "$HOME/.quest_name" 2>/dev/null || echo unknown)"
+if [ -s "$HOME/.quest_keys" ]; then FRAGS="$(cat "$HOME/.quest_keys")"; else FRAGS="(none yet)"; fi
+if [ -n "$GUM" ]; then
+    "$GUM" style --border rounded --padding "0 2" --border-foreground 228 \
+        "Explorer: $NAME" "Key fragments:" "$FRAGS"
+else
+    echo "Explorer: $NAME"
+    echo "Key fragments collected:"
+    echo "$FRAGS"
+fi
 EOF
 chmod +x "$BIN/quest-progress"
 
@@ -527,17 +611,28 @@ EOF
 fi
 
 # ---------- done ----------
-G=$(printf '\033[1;92m'); R=$(printf '\033[0m')
-echo ""
-echo "============================================="
-echo "  The system has awakened, $QNAME."
-echo ""
-echo "  Type these three lines:"
-echo ""
-echo "     ${G}source ~/.bashrc${R}        <- activates hint & quest-progress"
-echo "     ${G}cd ~/linux-quest${R}"
-echo "     ${G}cat START_HERE.txt${R}"
-echo ""
-echo "  Broke something? Re-run the setup command."
-echo "  The world resets. Your name and keys survive."
-echo "============================================="
+if [ -n "$GUM" ]; then
+    "$GUM" style --border double --padding "1 3" --margin "1 0" --border-foreground 82 \
+        "The system has awakened, $QNAME." "" \
+        "Type these three lines:" "" \
+        "  source ~/.bashrc" \
+        "  cd ~/linux-quest" \
+        "  cat START_HERE.txt" "" \
+        "Broke something? Re-run the setup command." \
+        "The world resets. Your name and keys survive."
+else
+    G=$(printf '\033[1;92m'); R=$(printf '\033[0m')
+    echo ""
+    echo "============================================="
+    echo "  The system has awakened, $QNAME."
+    echo ""
+    echo "  Type these three lines:"
+    echo ""
+    echo "     ${G}source ~/.bashrc${R}"
+    echo "     ${G}cd ~/linux-quest${R}"
+    echo "     ${G}cat START_HERE.txt${R}"
+    echo ""
+    echo "  Broke something? Re-run the setup command."
+    echo "  The world resets. Your name and keys survive."
+    echo "============================================="
+fi
