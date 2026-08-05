@@ -66,23 +66,7 @@ EOF
 
 QLOAD='LIB="$HOME/.quest_lib.sh"; if [ -f "$LIB" ]; then . "$LIB"; else WHT=""; GRN=""; BLU=""; RED=""; RST=""; CMD=""; qbox(){ shift; echo ""; local l; for l in "$@"; do echo "   $l"; done; echo ""; }; fi'
 
-# ---------- ask the explorer's name (once) ----------
-if [ ! -s "$NAMEF" ]; then
-    QNAME=""
-    if [ -t 0 ]; then
-        if [ -n "$GUM" ]; then
-            QNAME=$("$GUM" input --placeholder "state your name, explorer..." \
-                    --prompt "🐧 > " --prompt.foreground "34" --cursor.foreground "44")
-        else
-            echo ""
-            echo "Before the system wakes... state your name, explorer:"
-            read -r QNAME
-        fi
-    fi
-    [ -z "$QNAME" ] && QNAME="Explorer"
-    echo "$QNAME" > "$NAMEF"
-fi
-QNAME="$(cat "$NAMEF")"
+# (the explorer's name is asked at the final door, not here)
 
 # ---------- optional fun tools (never block if they fail) ----------
 if ! command -v cowsay >/dev/null 2>&1; then
@@ -271,9 +255,12 @@ echo "banana peel. why is this in a computer."    > "$A2/mission2_rescue/rubble/
 cat > "$A2/mission2_rescue/note.txt" << 'EOF'
 The admin's gem is buried under rubble/.
 
-  1. [[B]]MOVE[[/B]] it into vault/           [[C]] mv <from> <to> [[E]]
-  2. [[B]]COPY[[/B]] it, inside vault/, to a
-     second file: gem_backup.txt   [[C]] cp <from> <to> [[E]]
+  1. [[B]]MOVE[[/B]] the gem into vault/.
+  2. Then [[B]]COPY[[/B]] it, inside vault/, to a
+     second file named gem_backup.txt.
+
+(The admin's tools had very short names.
+ Two letters each, in fact.)
 
 Leave the trash alone. It has feelings too. Then:
 
@@ -315,9 +302,9 @@ echo "[SECURITY] ACCESS-CODE: TUX-4  (do not tell anyone)" >> "$A2/mission3_hays
 cat > "$A2/mission3_haystack/note.txt" << 'EOF'
 An [[B]]ACCESS-CODE[[/B]] hides in ONE of these 50 log files.
 
-Don't read. [[G]]Search:[[/G]]
-
-   [[C]] grep "WORD" logs/* [[E]]
+Don't read all 50. The admin never read - he [[G]]searched[[/G]].
+His favorite tool could grab any word
+from a thousand files at once.
 
 Take the code to [[B]]gate3[[/B]], back in the quest folder.
 EOF
@@ -388,11 +375,11 @@ EOF
 cat > "$A3/mission1_sealed/note.txt" << 'EOF'
 A letter lies here, [[X]]SEALED[[/X]]. Try to read it. [[X]]Denied?[[/X]]
 
-The lock is a permission. The locksmith is [[G]]chmod[[/G]]:
+The lock is a permission.
+The locksmith's name is [[G]]chmod[[/G]] - ask him nicely
+to give you back your [[B]]+r[[/B]]ight to read.
 
-   [[C]] chmod +r sealed_letter.txt [[E]]
-
-Read the letter. It will tell you what to do next.
+Then read the letter. It will tell you what to do next.
 EOF
 
 cat > "$A3/mission1_sealed/claim.sh" << EOF
@@ -425,12 +412,11 @@ chmod +x "$A3/mission1_sealed/claim.sh"
 mkdir -p "$A3/mission2_heart"
 cat > "$A3/mission2_heart/note.txt" << 'EOF'
 "In Linux, [[G]]EVERYTHING is a file.[[/G]]
- Even the machine's beating heart - the [[B]]CPU[[/B]]:
+ Even the machine's beating heart - the [[B]]CPU[[/B]].
+ It beats inside:  [[B]]/proc/cpuinfo[[/B]]
 
-   [[C]] cat /proc/cpuinfo [[E]]
-   [[C]] grep -c processor /proc/cpuinfo [[E]]
-
- Look at it. Then answer the machine's question:"
+ Look at it. [[G]]Count[[/G]] its processors.
+ Then answer the machine's question:"
 
    [[C]] ./heart.sh [[E]]
 EOF
@@ -480,9 +466,10 @@ cat > "$A3/mission3_final/note.txt" << 'EOF'
 The last door needs the [[U]]FINALWORD[[/U]] - buried in
 801 lines of static inside transmission.txt.
 
-Join your tools with a [[G]]pipe[[/G]]. One speaks, one listens:
+Too much to read. The admin's last lesson:
 
-   [[C]] cat transmission.txt | grep "WORD" [[E]]
+ "Join two tools with a [[G]]pipe |[[/G]] .
+  One speaks. The other listens for a single word."
 
 Found it? Then:
 
@@ -494,6 +481,7 @@ cat > "$A3/mission3_final/final_door.sh" << EOF
 $QLOAD
 KEYS="\$HOME/.quest_keys"
 NAMEF="\$HOME/.quest_name"
+QDIR="\$HOME/linux-quest"
 need="TUX-1 TUX-2 TUX-3 TUX-4 TUX-5 TUX-6"
 for k in \$need; do
     if ! grep -q "\$k" "\$KEYS"; then
@@ -521,56 +509,86 @@ if [ "\$word" != "freedom" ]; then
     exit 1
 fi
 
-if [ -s "\$NAMEF" ]; then
-    name="\$(cat "\$NAMEF")"
+# ---- the door asks your name, at the very end ----
+if [ -n "\$GUM" ] && [ -t 0 ]; then
+    name=\$("\$GUM" input --placeholder "state your name for the certificate..." \\
+           --prompt "🖊  > " --prompt.foreground "34" --cursor.foreground "44")
 else
-    echo "'...Correct. State your name for the record:'"
+    echo "'...Correct. State your name for the certificate:'"
     read -r name
 fi
+[ -z "\$name" ] && name="Explorer"
+echo "\$name" > "\$NAMEF"
 
 if [ -n "\$GUM" ] && [ -t 0 ]; then
     "\$GUM" spin --spinner pulse --spinner.foreground "40" \\
         --title "the final door opens for \$name..." -- sleep 2
 fi
 clear
-if command -v figlet >/dev/null 2>&1; then
-    if command -v lolcat >/dev/null 2>&1; then
-        figlet "QUEST COMPLETE" | lolcat
-    else
-        figlet "QUEST COMPLETE"
-    fi
-fi
 
+# ---- banner ----
+show_banner() {
+    if command -v figlet >/dev/null 2>&1; then
+        if command -v lolcat >/dev/null 2>&1; then
+            figlet "QUEST" "COMPLETE" | lolcat \$1
+        else
+            figlet "QUEST" "COMPLETE"
+        fi
+    else
+        echo "===== QUEST COMPLETE ====="
+    fi
+}
+show_banner
+
+# ---- certificate box ----
 if [ -n "\$GUM" ]; then
-    "\$GUM" style --border double --padding "1 4" --margin "1 2" --align center \\
+    CERT=\$("\$GUM" style --border double --padding "1 4" --margin "1 2" --align center \\
         --border-foreground "40" --foreground "255" --bold \\
         "CERTIFIED SYSTEM EXPLORER" "" "\$name" "" \\
         "found your place - uncovered the hidden" \\
         "built, rescued, and searched" \\
         "unlocked the sealed - read the machine's heart" \\
-        "joined tools into pipelines"
-    "\$GUM" style --padding "0 2" --italic --foreground "44" \\
-        "'This system was never abandoned." \\
-        " It was waiting for you, \$name." \\
-        " It is called Linux. And now it is yours.'"
+        "joined tools into pipelines")
+    QUOTE=\$("\$GUM" style --padding "0 2" --italic --foreground "44" \\
+        "'It was waiting for you, \$name." \\
+        " It is called Linux. And now it is yours.'")
 else
-    qbox 40 \\
-        "\${GRN}CERTIFIED SYSTEM EXPLORER:\${RST}  \${BLU}\$name\${RST}" \\
-        "" \\
-        "\${WHT}found your place - uncovered the hidden\${RST}" \\
-        "\${WHT}built, rescued, and searched\${RST}" \\
-        "\${WHT}unlocked the sealed - read the machine's heart\${RST}" \\
-        "\${WHT}joined tools into pipelines\${RST}" \\
-        "" \\
-        "\${BLU}'It was waiting for you, \$name.\${RST}" \\
-        "\${BLU} It is called Linux. And now it is yours.'\${RST}"
+    CERT="  CERTIFIED SYSTEM EXPLORER:  \$name
+  found your place - uncovered the hidden
+  built, rescued, and searched
+  unlocked the sealed - read the machine's heart
+  joined tools into pipelines"
+    QUOTE="  'It was waiting for you, \$name.
+   It is called Linux. And now it is yours.'"
 fi
+printf '%s\n' "\$CERT"
+printf '%s\n' "\$QUOTE"
 
-if command -v cowsay >/dev/null 2>&1; then
-    echo "welcome home, \$name" | cowsay -f tux 2>/dev/null || echo "welcome home, \$name" | cowsay
-fi
+# ---- the big tux ----
+show_tux() {
+    if command -v lolcat >/dev/null 2>&1; then
+        cat "\$QDIR/.tux" 2>/dev/null | lolcat \$1
+    else
+        printf '%s' "\$WHT"; cat "\$QDIR/.tux" 2>/dev/null; printf '%s' "\$RST"
+    fi
+}
+show_tux
 echo ""
-echo "  (screenshot this. you earned it.)"
+
+# ---- save the certificate as a file they keep ----
+CERTFILE="\$QDIR/certificate.txt"
+{
+    show_banner -f
+    printf '%s\n' "\$CERT"
+    printf '%s\n' "\$QUOTE"
+    show_tux -f
+} > "\$CERTFILE" 2>/dev/null
+
+qbox 31 \\
+    "\${WHT}Your certificate is saved as a file:\${RST}" \\
+    "  \${CMD} cat ~/linux-quest/certificate.txt \${RST}" \\
+    "" \\
+    "\${WHT}(screenshot this. you earned it.)\${RST}"
 EOF
 chmod +x "$A3/mission3_final/final_door.sh"
 
@@ -585,6 +603,55 @@ AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA[[/X]]
 [[B]]ACHIEVEMENT UNLOCKED: Rule Breaker[[/B]]
 (the admin is proud of you, secretly)
 EOF
+
+# ---- the big tux (shown at the ceremony) ----
+cat > "$Q/.tux" << 'TUXEOF'
+                                .:xxxxxxxx:.
+                             .xxxxxxxxxxxxxxxx.
+                            :xxxxxxxxxxxxxxxxxxx:.
+                           .xxxxxxxxxxxxxxxxxxxxxxx:
+                          :xxxxxxxxxxxxxxxxxxxxxxxxx:
+                          xxxxxxxxxxxxxxxxxxxxxxxxxxX:
+                          xxx:::xxxxxxxx::::xxxxxxxxx:
+                         .xx:   ::xxxxx:     :xxxxxxxx
+                         :xx  x.  xxxx:  xx.  xxxxxxxx
+                         :xx xxx  xxxx: xxxx  :xxxxxxx
+                         'xx 'xx  xxxx:. xx'  xxxxxxxx
+                          xx ::::::xx:::::.   xxxxxxxx
+                          xx:::::.::::.:::::::xxxxxxxx
+                          :x'::::'::::':::::':xxxxxxxxx.
+                          :xx.::::::::::::'   xxxxxxxxxx
+                          :xx: '::::::::'     :xxxxxxxxxx.
+                         .xx     '::::'        'xxxxxxxxxx.
+                       .xxxx                     'xxxxxxxxx.
+                     .xxxx                         'xxxxxxxxx.
+                   .xxxxx:                          xxxxxxxxxx.
+                  .xxxxx:'                          xxxxxxxxxxx.
+                 .xxxxxx:::.           .       ..:::_xxxxxxxxxxx:.
+                .xxxxxxx''      ':::''            ''::xxxxxxxxxxxx.
+                xxxxxx            :                  '::xxxxxxxxxxxx
+               :xxxx:'            :                    'xxxxxxxxxxxx:
+              .xxxxx              :                     ::xxxxxxxxxxxx
+              xxxx:'                                    ::xxxxxxxxxxxx
+              xxxx               .                      ::xxxxxxxxxxxx.
+          .:xxxxxx               :                      ::xxxxxxxxxxxx::
+          xxxxxxxx               :                      ::xxxxxxxxxxxxx:
+          xxxxxxxx               :                      ::xxxxxxxxxxxxx:
+          ':xxxxxx               '                      ::xxxxxxxxxxxx:'
+            .:. xx:.                                   .:xxxxxxxxxxxxx'
+          ::::::.'xx:.            :                  .:: xxxxxxxxxxx':
+  .:::::::::::::::.'xxxx.                            ::::'xxxxxxxx':::.
+  ::::::::::::::::::.'xxxxx                          :::::.'.xx.'::::::.
+  ::::::::::::::::::::.'xxxx:.                       :::::::.'':::::::::
+  ':::::::::::::::::::::.'xx:'                     .'::::::::::::::::::::..
+    :::::::::::::::::::::.'xx                    .:: :::::::::::::::::::::::
+  .:::::::::::::::::::::::. xx               .::xxxx :::::::::::::::::::::::
+  :::::::::::::::::::::::::.'xxx..        .::xxxxxxx ::::::::::::::::::::'
+  '::::::::::::::::::::::::: xxxxxxxxxxxxxxxxxxxxxxx :::::::::::::::::'
+    '::::::::::::::::::::::: xxxxxxxxxxxxxxxxxxxxxxx :::::::::::::::'
+        ':::::::::::::::::::_xxxxxx::'''::xxxxxxxxxx '::::::::::::'
+             '':.::::::::::'                        `._'::::::''
+TUXEOF
 
 # ============================================================
 #  COLORIZE + STYLE the notes (white body text everywhere)
@@ -719,7 +786,7 @@ fi
 if [ -n "$GUM" ]; then
     "$GUM" style --border double --padding "1 3" --margin "1 0" \
         --border-foreground "28" --foreground "255" \
-        "The system has awakened, $QNAME." "" \
+        "The system has awakened." "" \
         "Type these three lines:" "" \
         "$(printf '\033[1;38;5;44m  source ~/.bashrc\033[0m')" \
         "$(printf '\033[1;38;5;44m  cd ~/linux-quest\033[0m')" \
@@ -730,7 +797,7 @@ else
     G=$(printf '\033[1;38;5;34m'); B=$(printf '\033[1;38;5;44m'); W=$(printf '\033[1;38;5;255m'); R=$(printf '\033[0m')
     echo ""
     echo "${G}=============================================${R}"
-    echo "  ${W}The system has awakened, ${B}$QNAME${W}.${R}"
+    echo "  ${W}The system has awakened.${R}"
     echo ""
     echo "  ${W}Type these three lines:${R}"
     echo ""
