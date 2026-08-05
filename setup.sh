@@ -1,14 +1,15 @@
 #!/bin/bash
 # ============================================================
-#  LINUX QUEST - world builder
+#  LINUX QUEST v2 - world builder
 #  Runs on: Google Cloud Shell, WSL Ubuntu, Docker, any Linux
 #  Usage:   bash <(curl -sL YOURLINK/setup.sh)
-#  Reset:   re-run the same command (progress keys survive)
-#  Fresh:   bash setup.sh --fresh   (wipes progress too)
+#  Reset:   re-run the same command (name + keys survive)
+#  Fresh:   bash setup.sh --fresh   (wipes name + keys too)
 # ============================================================
 
 Q="$HOME/linux-quest"
 KEYS="$HOME/.quest_keys"
+NAMEF="$HOME/.quest_name"
 BIN="$HOME/.local/bin"
 
 # ---------- reset ----------
@@ -16,9 +17,22 @@ if [ -d "$Q" ]; then
     chmod -R 700 "$Q" 2>/dev/null
     rm -rf "$Q"
 fi
-[ "$1" = "--fresh" ] && rm -f "$KEYS"
+if [ "$1" = "--fresh" ]; then rm -f "$KEYS" "$NAMEF"; fi
 touch "$KEYS"
 mkdir -p "$Q" "$BIN"
+
+# ---------- ask the explorer's name (once) ----------
+if [ ! -s "$NAMEF" ]; then
+    QNAME=""
+    if [ -t 0 ]; then
+        echo ""
+        echo "Before the system wakes... state your name, explorer:"
+        read -r QNAME
+    fi
+    [ -z "$QNAME" ] && QNAME="Explorer"
+    echo "$QNAME" > "$NAMEF"
+fi
+QNAME="$(cat "$NAMEF")"
 
 # ---------- optional fun tools (never block if they fail) ----------
 if ! command -v cowsay >/dev/null 2>&1; then
@@ -51,7 +65,7 @@ notes everywhere. His first note is taped to the screen:
 Somewhere near you is a room called act1.
 It has four doors. One of them is lying to you.
 
-(Stuck at any point? type:  hint )
+(Stuck at any point? type:  [[C]] hint [[E]] )
 =========================================================
 EOF
 
@@ -149,18 +163,19 @@ A2="$Q/act2_locked"
 # ---- mission 1: the builder ----
 mkdir -p "$A2/mission1_builder"
 cat > "$A2/mission1_builder/note.txt" << 'EOF'
-The admin's workshop collapsed. Rebuild it, right here,
-inside mission1_builder:
+Rebuild the admin's workshop, right here:
 
    workshop/
      tools/
      blueprints/
      secrets/
 
-Then create an empty file named  badge.txt  inside secrets/.
-(The admin created empty files with a gentle touch.)
+Then create an empty file  badge.txt  inside secrets/.
+(The admin created empty files with a gentle [[U]]"touch"[[/U]].)
 
-When you believe the workshop stands, run:  ./inspect.sh
+Go back here and inspect after that:
+
+   [[C]] ./inspect.sh [[E]]
 EOF
 
 cat > "$A2/mission1_builder/inspect.sh" << 'EOF'
@@ -188,17 +203,15 @@ echo "old newspaper. worthless."                  > "$A2/mission2_rescue/rubble/
 echo "banana peel. why is this in a computer."    > "$A2/mission2_rescue/rubble/trash2.txt"
 
 cat > "$A2/mission2_rescue/note.txt" << 'EOF'
-An earthquake buried the admin's treasure under rubble/.
+The admin's gem is buried under rubble/.
 
-Your mission:
-  1. MOVE gem.txt out of rubble/ and into vault/
-     (moving is like teleporting a file: mv <from> <to>)
-  2. Make a backup: COPY the gem inside vault/
-     to a second file called  gem_backup.txt
+  1. MOVE it into vault/           [[C]] mv <from> <to> [[E]]
+  2. COPY it, inside vault/, to a
+     second file: gem_backup.txt   [[C]] cp <from> <to> [[E]]
 
-Leave the trash where it is. It has feelings too.
+Leave the trash alone. It has feelings too. Then:
 
-Then run:  ./check.sh
+   [[C]] ./check.sh [[E]]
 EOF
 
 cat > "$A2/mission2_rescue/check.sh" << 'EOF'
@@ -228,26 +241,16 @@ for i in $(seq 1 50); do
     echo "[log $i] penguin sightings: $((RANDOM % 9))"
     } > "$A2/mission3_haystack/logs/server_$i.log"
 done
-# bury the code in one random-ish file
 echo "[SECURITY] ACCESS-CODE: TUX-4  (do not tell anyone)" >> "$A2/mission3_haystack/logs/server_37.log"
 
 cat > "$A2/mission3_haystack/note.txt" << 'EOF'
-The final gate of this floor needs an ACCESS-CODE.
+An ACCESS-CODE hides in ONE of these 50 log files.
 
-It is written in ONE of these 50 log files.
+Don't read. Search:
 
-You could read all 50 by hand. The admin's ghost is
-watching, and he will laugh at you.
+   [[C]] grep "WORD" logs/* [[E]]
 
-Or... he left advice:
-
-   "When I needed a needle in a haystack of text,
-    I never read. I searched. My favorite tool
-    could grab any word from a thousand files:
-
-        <tool> "WORD" logs/*                    "
-
-Find the ACCESS-CODE. Then find gate3 in the quest folder.
+Take the code to gate3, back in the quest folder.
 EOF
 
 # ============================================================
@@ -295,41 +298,49 @@ But you just proved something important:
 
    >>> KEY FRAGMENT: TUX-5 <<<
 
-Two rooms remain. Go see the machine's heart.
+Prove you read me:  ./claim.sh
 EOF
 chmod 000 "$A3/mission1_sealed/sealed_letter.txt"
 
 cat > "$A3/mission1_sealed/note.txt" << 'EOF'
-A letter lies here, SEALED. Try to read it. Go on. Try.
+A letter lies here, SEALED. Try to read it. Denied?
 
-Denied? Good. Now listen:
+The lock is a permission. The locksmith is chmod:
 
-   "Every file answers three questions:
-    who may READ it, WRITE it, RUN it.
-    The lock is called a permission.
-    The locksmith is called  chmod.
+   [[C]] chmod +r sealed_letter.txt [[E]]
 
-    To grant yourself reading rights:
-        chmod +r <file>                "
-
-Unseal the letter. Read it. Remember this feeling.
+Read the letter. It will tell you what to do next.
 EOF
+
+cat > "$A3/mission1_sealed/claim.sh" << 'EOF'
+#!/bin/bash
+KEYS="$HOME/.quest_keys"
+echo "The room asks: 'What fragment did the sealed letter reveal?'"
+read -r answer
+if [ "$answer" = "TUX-5" ]; then
+    grep -q "TUX-5" "$KEYS" || echo "TUX-5" >> "$KEYS"
+    echo ""
+    echo "  'So you truly unsealed it. Fragment recorded.'"
+    echo ""
+    echo "  Next: mission2_heart"
+else
+    echo "  'No. Unseal the letter (chmod +r) and READ it first.'"
+fi
+EOF
+chmod +x "$A3/mission1_sealed/claim.sh"
 
 # ---- mission 2: the machine's heart ----
 mkdir -p "$A3/mission2_heart"
 cat > "$A3/mission2_heart/note.txt" << 'EOF'
-The admin's strangest note:
+"In Linux, EVERYTHING is a file.
+ Even the machine's beating heart - the CPU:
 
-   "In Linux, EVERYTHING is a file.
-    My mouse is a file. My disk is a file.
-    Even the machine's beating heart - the CPU -
-    is a file you can simply read:
+   [[C]] cat /proc/cpuinfo [[E]]
+   [[C]] grep -c processor /proc/cpuinfo [[E]]
 
-        /proc/cpuinfo
+ Look at it. Then answer the machine's question:"
 
-    Look at it. Then answer the machine's question."
-
-Run:  ./heart.sh
+   [[C]] ./heart.sh [[E]]
 EOF
 
 cat > "$A3/mission2_heart/heart.sh" << 'EOF'
@@ -349,7 +360,6 @@ if [ "$answer" = "$real" ]; then
     echo "  One room remains: mission3_final"
 else
     echo "  'No. Look again. Count the processors in /proc/cpuinfo.'"
-    echo "  (hint: remember the searching tool from the haystack?)"
 fi
 EOF
 chmod +x "$A3/mission2_heart/heart.sh"
@@ -367,26 +377,22 @@ done
 } > "$A3/mission3_final/transmission.txt"
 
 cat > "$A3/mission3_final/note.txt" << 'EOF'
-The last door needs one word - the FINALWORD.
+The last door needs the [[U]]FINALWORD[[/U]] - buried in
+801 lines of static inside transmission.txt.
 
-It is buried inside transmission.txt: 801 lines of static.
+Join your tools with a pipe. One speaks, one listens:
 
-The admin's last lesson:
+   [[C]] cat transmission.txt | grep "WORD" [[E]]
 
-   "Alone, my tools were good.
-    Connected, they were unstoppable.
-    I joined them with a pipe:  |
+Found it? Then:
 
-    One tool speaks, the next one listens:
-
-        cat <file> | <search-tool> "WORD"    "
-
-Find the FINALWORD, then run:  ./final_door.sh
+   [[C]] ./final_door.sh [[E]]
 EOF
 
 cat > "$A3/mission3_final/final_door.sh" << 'EOF'
 #!/bin/bash
 KEYS="$HOME/.quest_keys"
+NAMEF="$HOME/.quest_name"
 need="TUX-1 TUX-2 TUX-3 TUX-4 TUX-5 TUX-6"
 for k in $need; do
     if ! grep -q "$k" "$KEYS"; then
@@ -401,9 +407,12 @@ if [ "$word" != "freedom" ]; then
     echo "'Wrong. It hides in the transmission. Pipe your tools together.'"
     exit 1
 fi
-echo ""
-echo "'...Correct. State your name for the record:'"
-read -r name
+if [ -s "$NAMEF" ]; then
+    name="$(cat "$NAMEF")"
+else
+    echo "'...Correct. State your name for the record:'"
+    read -r name
+fi
 clear
 if command -v figlet >/dev/null 2>&1; then
     if command -v lolcat >/dev/null 2>&1; then
@@ -436,7 +445,7 @@ echo "     - join tools into pipelines"
 echo ""
 echo "   The admin's final message:"
 echo "     'This system was never abandoned."
-echo "      It was waiting for you."
+echo "      It was waiting for you, $name."
 echo "      It is called Linux. And now it is yours.'"
 echo "  =============================================="
 if command -v cowsay >/dev/null 2>&1; then
@@ -458,26 +467,37 @@ AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 (the admin is proud of you, secretly)
 EOF
 
-# lock the future acts
+# ============================================================
+#  COLORIZE: turn [[C]]...[[E]] into highlighted blocks
+#            and [[U]]...[[E]] into underlined text
+# ============================================================
+CHL=$(printf '\033[48;5;236m\033[1;93m')   # dark block + bold yellow
+UND=$(printf '\033[4;96m')                 # underline + cyan
+RST=$(printf '\033[0m')
+find "$Q" -name "*.txt" -type f | while read -r f; do
+    sed -i "s/\[\[C\]\]/${CHL} /g; s/\[\[U\]\]/${UND}/g; s/\[\[\/U\]\]/${RST}/g; s/\[\[E\]\]/ ${RST}/g" "$f" 2>/dev/null
+done
+
+# lock the future acts (AFTER colorizing)
 chmod 000 "$Q/act2_locked" "$Q/act3_locked"
 
 # ============================================================
-#  HELPER COMMANDS:  hint  +  quest-reset
+#  HELPER COMMANDS:  hint  +  quest-progress
 # ============================================================
 cat > "$BIN/hint" << 'EOF'
 #!/bin/bash
 case "$PWD" in
     *mission3_final*)  echo "hint: cat transmission.txt | grep \"FINALWORD\"" ;;
-    *mission2_heart*)  echo "hint: grep processor /proc/cpuinfo   ...then count. or let grep -c count for you." ;;
-    *mission1_sealed*) echo "hint: chmod +r sealed_letter.txt   then cat it." ;;
+    *mission2_heart*)  echo "hint: grep -c processor /proc/cpuinfo   gives you the count directly." ;;
+    *mission1_sealed*) echo "hint: chmod +r sealed_letter.txt -> cat it -> then ./claim.sh" ;;
     *act3*)            echo "hint: three missions. take them in order. read every note.txt." ;;
     *haystack*)        echo "hint: grep \"ACCESS-CODE\" logs/*" ;;
     *rescue*)          echo "hint: mv rubble/gem.txt vault/   then   cp vault/gem.txt vault/gem_backup.txt" ;;
-    *builder*)         echo "hint: mkdir makes folders (mkdir -p workshop/tools). touch makes empty files." ;;
+    *builder*)         echo "hint: mkdir makes folders (mkdir -p workshop/tools). touch makes empty files. then ./inspect.sh" ;;
     *act2*)            echo "hint: three missions. cd into each, read note.txt first." ;;
     *east_door*)       echo "hint: this room claims to be empty. ls has a flag that shows ALL files. try: ls -a" ;;
     *act1*)            echo "hint: cd into each door. cat every note.txt. one door is lying." ;;
-    *linux-quest*)     echo "hint: start with: cat START_HERE.txt   |  lost? pwd tells you where you are, ls shows what's here." ;;
+    *linux-quest*)     echo "hint: start with: cat START_HERE.txt   |  lost? pwd tells you where, ls shows what." ;;
     *)                 echo "hint: the quest lives at ~/linux-quest. go there:  cd ~/linux-quest" ;;
 esac
 EOF
@@ -485,10 +505,16 @@ chmod +x "$BIN/hint"
 
 cat > "$BIN/quest-progress" << 'EOF'
 #!/bin/bash
+echo "Explorer: $(cat "$HOME/.quest_name" 2>/dev/null || echo unknown)"
 echo "Key fragments collected:"
 if [ -s "$HOME/.quest_keys" ]; then cat "$HOME/.quest_keys"; else echo "  (none yet)"; fi
 EOF
 chmod +x "$BIN/quest-progress"
+
+# best-effort: also drop helpers somewhere already in PATH (Cloud Shell has sudo)
+if sudo -n true 2>/dev/null; then
+    sudo cp "$BIN/hint" "$BIN/quest-progress" /usr/local/bin/ 2>/dev/null || true
+fi
 
 # ---------- .bashrc touches (append once) ----------
 if ! grep -q "LINUX_QUEST_MARK" "$HOME/.bashrc" 2>/dev/null; then
@@ -496,24 +522,22 @@ cat >> "$HOME/.bashrc" << 'EOF'
 
 # LINUX_QUEST_MARK
 export PATH="$PATH:$HOME/.local/bin:/usr/games"
-echo -e "\033[1;32m[LINUX QUEST]\033[0m world loaded. cd ~/linux-quest && cat START_HERE.txt   (stuck? type: hint)"
+echo -e "\033[1;32m[LINUX QUEST]\033[0m welcome back, $(cat "$HOME/.quest_name" 2>/dev/null || echo explorer). (stuck? type: hint)"
 EOF
 fi
-export PATH="$PATH:$BIN:/usr/games"
 
 # ---------- done ----------
+G=$(printf '\033[1;92m'); R=$(printf '\033[0m')
 echo ""
 echo "============================================="
-echo "  The system has awakened."
+echo "  The system has awakened, $QNAME."
 echo ""
-echo "  Type:"
-echo "     cd ~/linux-quest"
-echo "     cat START_HERE.txt"
+echo "  Type these three lines:"
 echo ""
-echo "  Commands you now own:"
-echo "     hint            - contextual clue, anywhere"
-echo "     quest-progress  - see your key fragments"
+echo "     ${G}source ~/.bashrc${R}        <- activates hint & quest-progress"
+echo "     ${G}cd ~/linux-quest${R}"
+echo "     ${G}cat START_HERE.txt${R}"
 echo ""
 echo "  Broke something? Re-run the setup command."
-echo "  The world resets. Your keys survive."
+echo "  The world resets. Your name and keys survive."
 echo "============================================="
