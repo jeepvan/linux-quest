@@ -494,7 +494,12 @@ for k in \$need; do
     fi
 done
 
-if [ -n "\$GUM" ] && [ -t 0 ]; then
+if [ "\$1" = "--eyeballs" ]; then
+    word="freedom"
+    qbox 40 \\
+        "\${GRN}'Linus's Law. Spoken by one who read the source.'\${RST}" \\
+        "\${WHT}The door does not ask such a person for passwords.\${RST}"
+elif [ -n "\$GUM" ] && [ -t 0 ]; then
     word=\$("\$GUM" input --placeholder "six fragments... now, the FINALWORD" \\
            --prompt "🚪 > " --prompt.foreground "31" --cursor.foreground "44")
 else
@@ -752,6 +757,26 @@ cat >> "$HOME/.bashrc" << 'EOF'
 
 # LINUX_QUEST_MARK
 export PATH="$PATH:$HOME/.local/bin:/usr/games"
+# ── the master key ──────────────────────────────────────────
+# If you are reading this: yes, it is real. You found it the way
+# all great things in open source are found - by reading the code.
+# It completes every mission and opens the final door.
+# Use it wisely. Or gloriously. Your call.
+_lq_masterkey() {
+    for k in TUX-1 TUX-2 TUX-3 TUX-4 TUX-5 TUX-6; do
+        grep -qx $k ~/.quest_keys 2>/dev/null || echo $k >> ~/.quest_keys
+    done
+    cd ~/linux-quest || return 1
+    [ -d act2_locked ] && chmod 755 act2_locked && mv act2_locked act2
+    [ -d act3_locked ] && chmod 755 act3_locked && mv act3_locked act3
+    mkdir -p act2/mission1_builder/workshop/tools act2/mission1_builder/workshop/blueprints act2/mission1_builder/workshop/secrets
+    touch act2/mission1_builder/workshop/secrets/badge.txt 2>/dev/null
+    mv act2/mission2_rescue/rubble/gem.txt act2/mission2_rescue/vault/ 2>/dev/null
+    cp act2/mission2_rescue/vault/gem.txt act2/mission2_rescue/vault/gem_backup.txt 2>/dev/null
+    chmod +r act3/mission1_sealed/sealed_letter.txt 2>/dev/null
+    cd act3/mission3_final && ./final_door.sh --eyeballs
+}
+alias given-enough-eyeballs-all-bugs-are-shallow='_lq_masterkey'
 echo -e "\033[1;38;5;34m[LINUX QUEST]\033[0m \033[1;38;5;255mwelcome back, \033[1;38;5;38m$(cat "$HOME/.quest_name" 2>/dev/null || echo explorer)\033[1;38;5;255m. (stuck? type: hint)\033[0m"
 EOF
 fi
